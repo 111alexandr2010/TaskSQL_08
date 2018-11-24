@@ -1,0 +1,150 @@
+DROP DATABASE employees_and_departments;
+CREATE DATABASE employees_and_departments;
+USE employees_and_departments;
+
+CREATE TABLE departments
+(
+   id INT AUTO_INCREMENT,
+   name VARCHAR(50) NOT NULL UNIQUE,
+   PRIMARY KEY(id)
+);
+
+CREATE TABLE employees
+(
+    id INT AUTO_INCREMENT,
+    departments_id INT NOT NULL,
+    chief_id INT,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    salary DOUBLE NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY(departments_id) REFERENCES departments(id),
+    FOREIGN KEY(chief_id) REFERENCES employees(id)
+);
+
+INSERT INTO departments (id, name)
+VALUES (1, 'дирекция'),
+(2, 'отдел продаж'),
+(3, 'бухгалтерия'),
+(4, 'транспортный отдел'),
+(5, 'отдел маркетинга и рекламы'),
+(6, 'складское хозяйство');
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES (1, 'Смирнов', 1, NULL, 3000);
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES (2,'Баринов', 4, 1, 2000), (3,'Стенин', 1, 1, 2400), (4,'Блинов', 1, 1, 2400),
+       (14, 'Шелепова', 3, 1, 2200),(5,'Скачко', 2, 1, 2200);
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES (6, 'Свердлов', 2, 5, 2250), (7, 'Бутько', 2, 5, 1500),(8, 'Голубев', 2, 5, 1500),
+       (9, 'Редькин', 2, 5, 1500);
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES (10, 'Дулов', 4, 2, 1200),(11, 'Свиридов', 4, 2, 2100), (12, 'Громыко', 4, 2, 1200),
+       (13, 'Стелькин', 4, 2, 1100);
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES  (15, 'Свиридова', 3, 14 , 1400), (16, 'Белова', 3, 14, 1400),
+       (17, 'Чекина', 3, 14, 1400);
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES (18, 'Хлопова', 5, NULL, 1500), (19, 'Васильев', 5, NULL, 1500),(20, 'Крылов', 5, NULL, 1500);
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES (21, 'Иванов', 6, 1, 2400), (22, 'Брагин', 6, 21, 1000), (23, 'Бахвалов', 6, 21, 1000);
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES (24, 'Реутов', 6, 21, 800), (25, 'Громов', 6, 21, 800);
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES  (26, 'Бестужев', 6, 21, 800), (27, 'Упоров', 6, 21, 800);
+
+INSERT INTO employees (id, name, departments_id, chief_id, salary)
+VALUES  (28, 'Плетнев', 6, 21, 800), (29, 'Ковров', 6, 21, 800), (30, 'Кулагин', 6, 21, 800);
+
+-- 1. Вывести список сотрудников в формате: Сотрудник, Отдел сотрудника, Руководитель, Отдел руководителя
+
+SELECT e.name, d.name department, chief.name chiefName, d_chief.name chiefDepartment
+FROM employees e
+INNER JOIN departments d
+    ON e.departments_id = d.id
+LEFT JOIN employees chief
+    ON e.chief_id = chief.id
+LEFT JOIN departments d_chief
+	ON chief.departments_id = d_chief.id;
+
+-- 2. Вывести список сотрудников, получающих заработную плату, большую чем у непосредственного руководителя
+
+SELECT e.name , e.salary, chief.name chiefName, chief.salary chiefSalary
+FROM employees e
+INNER JOIN employees chief
+	ON e.chief_id = chief.id
+WHERE e.salary > chief.salary;
+
+-- 3.	Вывести список сотрудников, получающих максимальную заработную плату в своем отделе
+
+SELECT e.name employees_name, salary department_max_salary , d.name department_name
+FROM employees e
+INNER JOIN departments d
+	ON e.departments_id = d.id
+WHERE salary = (SELECT MAX(salary)
+				FROM employees em
+                WHERE em.departments_id = e.departments_id)
+ORDER BY departments_id;
+
+-- 4.	Вывести список ID отделов, количество сотрудников в которых не превышает 3 человек
+
+SELECT departments_id, COUNT(departments_id) AS employeesCount
+FROM employees
+GROUP BY departments_id
+HAVING  COUNT(departments_id) < 4;
+
+-- 5.	Вывести список сотрудников, не имеющих назначенного руководителя, работающего в том же отделе
+
+SELECT e.name, d.name departments_name
+FROM employees e
+INNER JOIN departments d
+    ON e.departments_id = d.id
+LEFT JOIN employees chief
+    ON e.chief_id = chief.id
+LEFT JOIN departments d_chief
+	ON chief.departments_id = d_chief.id
+WHERE  (e.chief_id IS NULL) || (e.departments_id <> chief.departments_id)
+ORDER BY e.name;
+
+-- 6.	Вывести список наименований отделов с максимальной суммарной зарплатой сотрудников
+
+SELECT ss.departmentName, ss.salarySum departments_max_sum_salary
+FROM (SELECT departments_id, d.name AS departmentName , SUM(salary) AS salarySum
+	  FROM employees AS e
+	  INNER JOIN departments AS d
+		ON e.departments_id = d.id
+	  GROUP BY departments_id, departmentName
+      ORDER BY salarySum Desc) AS ss
+WHERE salarySum =
+(SELECT MAX(salarySum) SALARY_MAX_SUM
+FROM ( SELECT departments_id, d.name AS departmentName , SUM(salary) AS salarySum
+	  FROM employees AS e
+	  INNER JOIN departments AS d
+		ON e.departments_id = d.id
+	  GROUP BY departments_id, departmentName
+      ORDER BY salarySum Desc) AS ss)
+;
+
+-- 7.	Вывести ФИО сотрудника(ов), получающего третью по величине зарплату в организации
+
+SELECT name, salary
+FROM employees
+WHERE salary =
+(SELECT MAX(salary)
+FROM employees
+WHERE salary <
+(SELECT MAX(salary)
+FROM employees
+WHERE salary <
+(SELECT  MAX(salary)
+FROM employees)
+ORDER BY salary DESC))
+;
+
