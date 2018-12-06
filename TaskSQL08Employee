@@ -134,7 +134,7 @@ SELECT e.name, e.salary
 FROM employees e
 LEFT JOIN  (SELECT (@nId := (@nId - 1)) newId, salary
             FROM employees
-            GROUP BY (salary) ) AS tableSalary
+            GROUP BY salary ) AS tableSalary
      ON tableSalary.salary = e.salary
 WHERE newId = 3
  ;
