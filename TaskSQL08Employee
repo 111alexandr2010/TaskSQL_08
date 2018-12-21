@@ -127,14 +127,14 @@ FROM ( SELECT departments_id, d.name AS departmentName , SUM(salary) AS salarySu
 
 -- 7.	Вывести ФИО сотрудника(ов), получающего третью по величине зарплату в организации
 
-SET @nId = (SELECT COUNT(DISTINCT salary)
-            FROM employees) + 1;
-
-SELECT e.name, e.salary
-FROM employees e
-LEFT JOIN  (SELECT (@nId := (@nId - 1)) newId, salary
-            FROM employees
-            GROUP BY salary ) AS tableSalary
-     ON tableSalary.salary = e.salary
-WHERE newId = 3
+SELECT e.name, e.salary FROM employees e
+WHERE e.salary =
+(SELECT ls FROM
+ (SELECT count(*) i, ls1.salary ls
+  FROM
+    (SELECT DISTINCT salary  FROM employees  ORDER BY salary DESC) ls1,
+    (SELECT DISTINCT salary  FROM employees  ORDER BY salary DESC) ls2
+ WHERE ls1.salary  <= ls2.salary
+ GROUP BY ls1.salary) list
+ WHERE i = 3) 
  ;
